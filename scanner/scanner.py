@@ -1,6 +1,8 @@
 import requests
 from checks.headers import check_headers
 from checks.ssl_check import check_ssl
+from checks.robots import check_robots
+from checks.sitemap import check_sitemap
 
 def scan_website(url):
 
@@ -10,6 +12,8 @@ def scan_website(url):
 
     results.extend(check_headers(response.headers))
     results.extend(check_ssl(url))
+    results.extend(check_robots(url))
+    results.extend(check_sitemap(url))
 
     return results
 
