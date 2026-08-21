@@ -1,5 +1,6 @@
 import requests
 from checks.headers import check_headers
+from checks.ssl_check import check_ssl
 
 def scan_website(url):
 
@@ -8,6 +9,7 @@ def scan_website(url):
     results = []
 
     results.extend(check_headers(response.headers))
+    results.extend(check_ssl(url))
 
     return results
 
