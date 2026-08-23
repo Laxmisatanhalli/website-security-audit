@@ -13,7 +13,7 @@ async function authMiddleware(req, res, next){
     } 
     try{
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const user = await User.findByPk(decoded.userId); 
+      const user = await User.findByPk(decoded.id); 
 if (!user) {
   return res.status(401).json({ message: 'User not found' }); 
 }
@@ -37,7 +37,7 @@ async function authsystemUserMiddleware(req, res, next) {
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const user = await User.scope('withSystemUser').findByPk(decoded.userId);
+        const user = await User.scope('withSystemUser').findByPk(decoded.id);
 
 if (!user || !user.systemUser) {
   return res.status(403).json({ message: 'Forbidden: Access denied for non-system users' });
