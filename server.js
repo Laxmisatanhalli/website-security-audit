@@ -1,8 +1,8 @@
 require('dotenv').config();
-const app = require('./backend/app')
-const {connectTodb} = require('./backend/config/db')
-const {sequelize} = require('./backend/config/db')
-require('./backend/models');
+const app = require('./src/app')
+const {connectTodb} = require('./src/config/db')
+const {sequelize} = require('./src/config/db')
+require('./src/models');
 
 
 async function start(){
