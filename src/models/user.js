@@ -6,8 +6,13 @@ const User = sequelize.define('User', {
   name: {
         type: DataTypes.STRING,
         allowNull: false,
+        unique: true,
         validate: {
             notEmpty: { msg: 'name is required' },
+            len: {
+                args: [3, 50],
+                msg: 'username must be 3-50 characters'
+            },
         },
     },
 
@@ -31,8 +36,20 @@ const User = sequelize.define('User', {
                 msg: 'password must be at least 6 characters long'
             },
         },
-    } 
-}, 
+    },
+    role: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        defaultValue: 'Viewer',
+    },
+
+    systemUser: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+    },
+},
+
 { 
   hooks: {
         beforeCreate: async (user) => {
@@ -56,6 +73,9 @@ const User = sequelize.define('User', {
         withPassword: {
             attributes: {},
         },
+        withSystemUser: {
+            attributes: {},
+        }
     },
 
 });

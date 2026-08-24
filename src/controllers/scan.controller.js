@@ -1,127 +1,100 @@
 const { Website, Scan, ScanResult } = require('../models');
-const { execFile } = require('child_process');
-const path = require('path');
+const { runScanner } = require('../services/scanner.service');
 
-function runPythonScanner(url) {
-    return new Promise((resolve, reject) => {
-        const scannerPath = path.resolve(
-            __dirname,
-            '../../scanner/scanner.py'
-        );
+const VALID_SEVERITIES = ['Info', 'Low', 'Medium', 'High', 'Critical'];
 
-        execFile(
-            'python',
-            [scannerPath],
-            {
-                timeout: 120000,
-                maxBuffer: 10 * 1024 * 1024
-            },
-            (error, stdout, stderr) => {
-                if (error) {
-                    console.error('Python scanner error:', stderr);
+async function startScan(req, res) {
+  try {
+    const { websiteId } = req.body;
 
-                    return reject(
-                        new Error('Security scanner failed')
-                    );
-                }
-
-                try {
-                    const results = JSON.parse(stdout);
-                    resolve(results);
-                } catch (parseError) {
-                    console.error('Scanner output:', stdout);
-                    reject(
-                        new Error('Invalid scanner output')
-                    );
-                }
-            }
-        );
-    });
-}
-
-
-async function createScan(req, res) {
-    try {
-        const { url } = req.body;
-
-        if (!url || typeof url !== 'string') {
-            return res.status(400).json({
-                message: 'Website URL is required'
-            });
-        }
-
-        let parsedUrl;
-
-        try {
-            parsedUrl = new URL(url);
-        } catch {
-            return res.status(400).json({
-                message: 'Invalid website URL'
-            });
-        }
-
-        if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
-            return res.status(400).json({
-                message: 'Only HTTP and HTTPS URLs are supported'
-            });
-        }
-
-        const website = await Website.create({
-            url: parsedUrl.toString(),
-            UserId: req.user.id
-        });
-
-        const scan = await Scan.create({
-            WebsiteId: website.id,
-            status: 'running'
-        });
-
-        try {
-            const results = await runPythonScanner(
-                parsedUrl.toString()
-            );
-
-            await ScanResult.bulkCreate(
-                results.map(result => ({
-                    ScanId: scan.id,
-                    module: result.module,
-                    severity: result.severity,
-                    issue: result.issue,
-                    recommendation: result.recommendation
-                }))
-            );
-
-            await scan.update({
-                status: 'completed'
-            });
-
-            return res.status(201).json({
-                message: 'Website scan completed',
-                scanId: scan.id,
-                website: website.url,
-                results
-            });
-
-        } catch (scannerError) {
-            await scan.update({
-                status: 'failed'
-            });
-
-            return res.status(500).json({
-                message: 'Website scan failed'
-            });
-        }
-
-    } catch (error) {
-        console.error('createScan error:', error);
-
-        return res.status(500).json({
-            message: 'Internal server error'
-        });
+    if (!websiteId) {
+      return res.status(400).json({ message: 'websiteId is required' });
     }
+
+    const website = await Website.findOne({
+      where: { id: websiteId, UserId: req.user.id },
+    });
+
+    if (!website) {
+      return res.status(404).json({ message: 'Website not found' });
+    }
+
+    const scan = await website.createScan({ status: 'running' });
+
+    try {
+      const results = await runScanner(website.url);
+
+      const sanitizedResults = results
+        .filter((r) => VALID_SEVERITIES.includes(r.severity))
+        .map((r) => ({
+          ScanId: scan.id,
+          module: r.module,
+          severity: r.severity,
+          issue: r.issue,
+          recommendation: r.recommendation || null,
+        }));
+
+      if (sanitizedResults.length) {
+        await ScanResult.bulkCreate(sanitizedResults);
+      }
+
+      await scan.update({ status: 'completed' });
+
+      const scanWithResults = await Scan.findByPk(scan.id, {
+        include: ScanResult,
+      });
+
+      return res.status(201).json({ scan: scanWithResults });
+    } catch (scanErr) {
+      console.error('scan run error:', scanErr);
+      await scan.update({ status: 'failed' });
+      return res.status(502).json({
+        message: 'Scan failed to complete',
+        error: scanErr.message,
+        scan,
+      });
+    }
+  } catch (err) {
+    console.error('startScan error:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
 }
 
+async function getScan(req, res) {
+  try {
+    const { id } = req.params;
 
-module.exports = {
-    createScan
-};
+    const scan = await Scan.findByPk(id, {
+      include: [{ model: ScanResult }, { model: Website }],
+    });
+
+    if (!scan || scan.Website.UserId !== req.user.id) {
+      return res.status(404).json({ message: 'Scan not found' });
+    }
+
+    return res.status(200).json({ scan });
+  } catch (err) {
+    console.error('getScan error:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+}
+
+async function listScans(req, res) {
+  try {
+    const websites = await req.user.getWebsites({ attributes: ['id'] });
+    const websiteIds = websites.map((w) => w.id);
+
+    const scans = await Scan.findAll({
+      where: { WebsiteId: websiteIds },
+      include: [Website],
+      order: [['createdAt', 'DESC']],
+    });
+
+    return res.status(200).json({ scans });
+  } catch (err) {
+    console.error('listScans error:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+}
+
+module.exports = { startScan, getScan, listScans };
