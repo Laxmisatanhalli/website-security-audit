@@ -1,7 +1,7 @@
-const User = require('./User');
-const Website = require('./Website');
-const Scan = require('./Scan');
-const ScanResult = require('./ScanResult');
+const User = require('./user');
+const Website = require('./website');
+const Scan = require('./scan');
+const ScanResult = require('./scanResult');
 
 User.hasMany(Website);
 Website.belongsTo(User);
