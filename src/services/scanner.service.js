@@ -31,9 +31,15 @@ function runScanner(url) {
 
       try {
         const parsed = JSON.parse(stdout);
-        if (parsed.error) {
+
+        if (Array.isArray(parsed)) {
+          return resolve(parsed);
+        }
+
+        if (parsed && parsed.error) {
           return reject(new Error(parsed.error));
         }
+
         return resolve(parsed.results || []);
       } catch (err) {
         return reject(new Error(`Unable to parse scanner output: ${err.message}. Raw output: ${stdout}`));
