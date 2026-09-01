@@ -86,7 +86,7 @@ async function listScans(req, res) {
 
     const scans = await Scan.findAll({
       where: { WebsiteId: websiteIds },
-      include: [Website],
+      include: [{ model: ScanResult }, { model: Website }],
       order: [['createdAt', 'DESC']],
     });
 
