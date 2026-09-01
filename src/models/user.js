@@ -3,12 +3,12 @@ const bcrypt = require('bcrypt');
 const { sequelize } = require('../config/db');
 
 const User = sequelize.define('User', {
-  name: {
+  username: {
         type: DataTypes.STRING,
         allowNull: false,
         unique: true,
         validate: {
-            notEmpty: { msg: 'name is required' },
+            notEmpty: { msg: 'username is required' },
             len: {
                 args: [3, 50],
                 msg: 'username must be 3-50 characters'
