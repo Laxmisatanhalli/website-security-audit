@@ -6,7 +6,7 @@ import axios from 'axios';
 // mounted directly at the root by server.js (e.g. app.use('/websites', ...)),
 // not under an /api prefix, so this stays empty to match.
 const api = axios.create({
-  baseURL: '/',
+  baseURL: '/api',
   withCredentials: true, // required: auth is a cookie-based JWT (see auth.middleware.js)
 });
 

@@ -14,8 +14,8 @@ const ScanResult = sequelize.define('ScanResult', {
     },
 
     severity: {
-    type: DataTypes.ENUM('Low', 'Medium', 'High', 'Critical'),
-    allowNull: false
+  type: DataTypes.ENUM('Info', 'Low', 'Medium', 'High', 'Critical'),
+  allowNull: false
 },
 
     issue: {
