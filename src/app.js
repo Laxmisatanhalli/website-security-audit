@@ -1,3 +1,4 @@
+const path = require('path');
 const express = require ('express');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
@@ -14,4 +15,19 @@ app.use('/api/auth', authRoutes);
 app.use('/api/scans', scanRoutes);
 app.use('/api/websites', websiteRoutes);
 
+
+app.use(express.static(path.join(__dirname, '../frontend')));
+
+app.get(/.*/, (req, res, next) => {
+
+    if (req.path.startsWith('/api/')) {
+        return next();
+    }
+
+    res.sendFile(
+        path.join(__dirname, '../frontend/index.html')
+    );
+});
+
 module.exports = app;
+

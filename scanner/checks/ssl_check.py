@@ -39,12 +39,18 @@ def check_ssl(url):
         now = datetime.now(timezone.utc)
         days_remaining = (expires_at - now).days
 
+        cert_data = {
+            "expiresAt": expires_at.isoformat(),
+            "daysRemaining": days_remaining
+        }
+
         if days_remaining < 0:
             return [{
                 "module": "SSL/TLS",
                 "severity": "High",
                 "issue": "SSL/TLS certificate has expired",
-                "recommendation": "Renew the SSL/TLS certificate"
+                "recommendation": "Renew the SSL/TLS certificate",
+                "data": cert_data
             }]
 
         if days_remaining <= 30:
@@ -52,14 +58,16 @@ def check_ssl(url):
                 "module": "SSL/TLS",
                 "severity": "Medium",
                 "issue": f"SSL/TLS certificate expires in {days_remaining} days",
-                "recommendation": "Renew the SSL/TLS certificate soon"
+                "recommendation": "Renew the SSL/TLS certificate soon",
+                "data": cert_data
             }]
 
         return [{
             "module": "SSL/TLS",
             "severity": "Info",
             "issue": f"SSL/TLS certificate is valid for {days_remaining} more days",
-            "recommendation": "No action required"
+            "recommendation": "No action required",
+            "data": cert_data
         }]
 
     except ssl.SSLCertVerificationError:

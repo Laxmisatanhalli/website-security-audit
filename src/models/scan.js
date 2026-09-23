@@ -12,6 +12,16 @@ const Scan = sequelize.define('Scan', {
         type: DataTypes.STRING,
         allowNull: false,
         defaultValue: 'pending'
+    },
+
+    securityScore: {
+        type: DataTypes.INTEGER,
+        allowNull: true
+    },
+
+    scoreCategory: {
+        type: DataTypes.ENUM('Excellent', 'Good', 'Needs Improvement', 'High Risk', 'Critical'),
+        allowNull: true
     }
 });
 

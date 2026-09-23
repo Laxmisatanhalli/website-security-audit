@@ -3,6 +3,7 @@ const app = require('./src/app')
 const {connectTodb} = require('./src/config/db')
 const {sequelize} = require('./src/config/db')
 require('./src/models');
+require('./src/services/scheduler.service').startScheduler();
 
 
 async function start(){
