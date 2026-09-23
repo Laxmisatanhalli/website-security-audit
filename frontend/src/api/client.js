@@ -2,9 +2,9 @@ import axios from 'axios';
 
 // Same-origin deployment: the built frontend is served by Express, so a
 // relative baseURL works both in dev (via Vite's proxy, see vite.config.js)
-// and in production (served from the same host as the API). Routes are
-// mounted directly at the root by server.js (e.g. app.use('/websites', ...)),
-// not under an /api prefix, so this stays empty to match.
+// and in production (served from the same host as the API). Backend routes
+// are mounted under /api (see src/app.js: app.use('/api/auth', ...)), so
+// every call here is prefixed with /api.
 const api = axios.create({
   baseURL: '/api',
   withCredentials: true, // required: auth is a cookie-based JWT (see auth.middleware.js)

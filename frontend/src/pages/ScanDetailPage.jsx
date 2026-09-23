@@ -1,62 +1,25 @@
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { scansApi } from '../api/resources';
+import { scansApi, reportsApi } from '../api/resources';
 import SeverityBadge from '../components/SeverityBadge';
+import Icon from '../components/Icon';
+import { useState } from 'react';
 
-const SEVERITY_ORDER = { Critical: 0, High: 1, Medium: 2, Low: 3, Info: 4 };
-
-export default function ScanDetailPage() {
-  const { id } = useParams();
-  const { data: scan, isLoading } = useQuery({ queryKey: ['scans', id], queryFn: () => scansApi.get(id) });
-
-  if (isLoading) return <p className="text-slate-500">Loading…</p>;
-  if (!scan) return <p className="text-slate-500">Scan not found.</p>;
-
-  const findings = [...(scan.ScanResults || [])].sort(
-    (a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]
-  );
-
-  const grouped = findings.reduce((acc, f) => {
-    (acc[f.module] ||= []).push(f);
-    return acc;
-  }, {});
-
-  return (
-    <div>
-      <Link to={`/websites/${scan.WebsiteId}`} className="text-sm text-slate-500 hover:underline">
-        &larr; Back to website
-      </Link>
-      <div className="flex items-center justify-between mt-2 mb-6">
-        <div>
-          <h1 className="text-xl font-semibold">Scan #{scan.id}</h1>
-          <p className="text-sm text-slate-500">{new Date(scan.createdAt).toLocaleString()}</p>
-        </div>
-        <div className="text-right">
-          <div className="text-2xl font-semibold">{scan.securityScore ?? '—'}</div>
-          <div className="text-sm text-slate-500">{scan.scoreCategory}</div>
-        </div>
-      </div>
-
-      {Object.entries(grouped).map(([module, items]) => (
-        <div key={module} className="bg-white border rounded-lg mb-4 overflow-hidden">
-          <div className="px-4 py-2 bg-slate-50 border-b text-sm font-medium">{module}</div>
-          <ul className="divide-y">
-            {items.map((f) => (
-              <li key={f.id} className="px-4 py-3">
-                <div className="flex items-start gap-3">
-                  <SeverityBadge severity={f.severity} />
-                  <div className="flex-1">
-                    <p className="text-sm text-slate-900">{f.issue}</p>
-                    {f.recommendation && (
-                      <p className="text-xs text-slate-500 mt-1">{f.recommendation}</p>
-                    )}
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))}
-    </div>
-  );
+const ORDER={Critical:0,High:1,Medium:2,Low:3,Info:4};
+export default function ScanDetailPage(){
+ const {id}=useParams(); const {data:scan,isLoading,isError}=useQuery({queryKey:['scans',id],queryFn:()=>scansApi.get(id)}); const [format,setFormat]=useState('pdf');
+ if(isLoading)return <div className="empty">Loading scan results…</div>; if(isError||!scan)return <div className="empty">Scan not found.</div>;
+ const findings=[...(scan.ScanResults||[])].sort((a,b)=>(ORDER[a.severity]??9)-(ORDER[b.severity]??9));
+ const counts=findings.reduce((a,f)=>(a[f.severity]=(a[f.severity]||0)+1,a),{});
+ return <div>
+  <Link to={`/websites/${scan.WebsiteId}`} className="btn btn-secondary" style={{marginBottom:15}}><span>←</span> Back to website</Link>
+  <div className="scan-hero"><div><div className="label">Security audit #{scan.id}</div><h2>{scan.Website?.name||`Website #${scan.WebsiteId}`}</h2><p>{scan.Website?.url||''} · {new Date(scan.createdAt).toLocaleString()}</p></div><div className="scan-score"><strong>{scan.securityScore??'—'}</strong><span>{scan.scoreCategory||scan.status}</span></div></div>
+  <div className="stat-grid">
+   {['Critical','High','Medium','Low'].map((s,i)=><div className="card stat-card" key={s}><span className={`stat-accent ${i<2?'red':i===2?'amber':'blue'}`}/><div className="stat-label">{s} findings</div><div className="stat-value">{counts[s]||0}</div></div>)}
+  </div>
+  <div className="card" style={{marginBottom:15}}><div className="card-head"><div><h3 className="card-title">Report</h3><div className="card-sub">Download this scan in your preferred format.</div></div><div style={{display:'flex',gap:8}}><select className="input" style={{width:120}} value={format} onChange={e=>setFormat(e.target.value)}><option value="pdf">PDF</option><option value="excel">Excel</option><option value="csv">CSV</option></select><button className="btn btn-secondary" onClick={()=>reportsApi.download(scan.id,'technical',format)}><Icon name="download" size={14}/>Download</button></div></div></div>
+  <div className="card"><div className="card-head"><div><h3 className="card-title">Findings</h3><div className="card-sub">{findings.length} result{findings.length!==1?'s':''} from this audit</div></div></div>
+   {!findings.length?<div className="empty"><div className="empty-icon"><Icon name="check"/></div>No security findings were recorded for this scan.</div>:findings.map(f=><div className="finding" key={f.id}><div className="finding-top"><SeverityBadge severity={f.severity}/><div className="finding-body"><div className="finding-module">{f.module}</div><div className="finding-title">{f.issue}</div>{f.recommendation&&<div className="finding-rec"><strong>Recommendation:</strong> {f.recommendation}</div>}</div></div></div>)}
+  </div>
+ </div>
 }

@@ -1,72 +1,41 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import Icon from '../components/Icon';
 
 export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [identifier, setIdentifier] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-    try {
-      // identifier can be a username or an email; the backend accepts either.
-      const isEmail = identifier.includes('@');
-      await login(isEmail ? { email: identifier, password } : { username: identifier, password });
-      navigate('/dashboard');
-    } catch (err) {
-      setError(err.response?.data?.message || 'Login failed');
-    } finally {
-      setLoading(false);
-    }
+  const [identifier,setIdentifier]=useState('');
+  const [password,setPassword]=useState('');
+  const [error,setError]=useState('');
+  const [loading,setLoading]=useState(false);
+  async function submit(e){
+    e.preventDefault(); setError(''); setLoading(true);
+    try { await login(identifier.includes('@') ? {email:identifier,password} : {username:identifier,password}); navigate('/dashboard'); }
+    catch(err){setError(err.response?.data?.message || 'Unable to sign in. Check your credentials.');}
+    finally{setLoading(false);}
   }
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50">
-      <form onSubmit={handleSubmit} className="w-full max-w-sm bg-white p-8 rounded-lg shadow-sm border">
-        <h1 className="text-xl font-semibold mb-1">Sign in</h1>
-        <p className="text-sm text-slate-500 mb-6">Website Security Audit Scanner</p>
-
-        {error && (
-          <div className="mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2">
-            {error}
-          </div>
-        )}
-
-        <label className="block text-sm font-medium mb-1">Username or email</label>
-        <input
-          className="w-full border rounded px-3 py-2 mb-4 text-sm"
-          value={identifier}
-          onChange={(e) => setIdentifier(e.target.value)}
-          required
-        />
-
-        <label className="block text-sm font-medium mb-1">Password</label>
-        <input
-          type="password"
-          className="w-full border rounded px-3 py-2 mb-6 text-sm"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-slate-900 text-white rounded py-2 text-sm font-medium disabled:opacity-50"
-        >
-          {loading ? 'Signing in…' : 'Sign in'}
-        </button>
-
-        <p className="text-sm text-slate-500 mt-4 text-center">
-          No account? <Link to="/register" className="text-slate-900 underline">Register</Link>
-        </p>
+  return <div className="login-shell">
+    <section className="login-brand">
+      <div className="brand-mark"><Icon name="shield" size={22}/></div>
+      <h1>Know what is exposed before attackers do.</h1>
+      <p>SecureAudit scans websites for security weaknesses, organizes findings by severity, and turns technical results into clear remediation actions.</p>
+      <div className="feature-list">
+        {['Security headers and configuration checks','SSL, DNS, CMS and information-disclosure checks','Reports with findings and remediation guidance'].map(x=><div className="feature" key={x}><span><Icon name="check" size={13}/></span>{x}</div>)}
+      </div>
+    </section>
+    <section className="login-panel">
+      <form className="login-card" onSubmit={submit}>
+        <div className="brand-mark"><Icon name="shield" size={18}/></div>
+        <h2>Welcome back</h2>
+        <p className="sub">Sign in to your security workspace.</p>
+        {error && <div className="alert alert-error">{error}</div>}
+        <div className="form-field"><label className="form-label">Username or email</label><input className="input" value={identifier} onChange={e=>setIdentifier(e.target.value)} required autoComplete="username"/></div>
+        <div className="form-field"><label className="form-label">Password</label><input className="input" type="password" value={password} onChange={e=>setPassword(e.target.value)} required autoComplete="current-password"/></div>
+        <button className="btn btn-primary" disabled={loading}>{loading ? 'Signing in…' : 'Sign in'}</button>
+        <div className="login-foot">No account? <Link to="/register">Create one</Link></div>
       </form>
-    </div>
-  );
+    </section>
+  </div>;
 }

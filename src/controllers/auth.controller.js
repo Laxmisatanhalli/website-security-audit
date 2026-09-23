@@ -137,10 +137,20 @@ async function logoutUser(req, res) {
   res.clearCookie('token', COOKIE_OPTIONS);
   return res.status(200).json({ message: 'Logged out successfully' });
 }
+
+/**
+ * GET /auth/me - returns the current session's user, derived from the
+ * verified JWT (req.user is populated by authMiddleware). Added so the
+ * frontend can confirm/restore a session on page load instead of trusting
+ * a value cached in localStorage — see frontend/src/context/AuthContext.jsx.
+ */
+async function getCurrentUser(req, res) {
+  return res.status(200).json({ user: toPublicUser(req.user) });
+}
  
 module.exports = {
   registerUser,
   loginUser,
   logoutUser,
+  getCurrentUser,
 };
- 

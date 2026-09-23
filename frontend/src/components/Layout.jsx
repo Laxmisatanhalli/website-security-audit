@@ -1,65 +1,81 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { notificationsApi } from '../api/resources';
+import { useQuery } from '@tanstack/react-query';
+import Icon from './Icon';
 
-const NAV_ITEMS = [
-  { to: '/dashboard', label: 'Dashboard' },
-  { to: '/websites', label: 'Websites' },
-  { to: '/notifications', label: 'Notifications' },
+const primary = [
+  { to: '/dashboard', label: 'Overview', icon: 'grid' },
+  { to: '/websites', label: 'Websites', icon: 'globe' },
+  { to: '/notifications', label: 'Notifications', icon: 'bell' },
+];
+const admin = [
+  { to: '/users', label: 'Users', icon: 'users' },
+  { to: '/settings', label: 'Settings', icon: 'settings' },
 ];
 
-const ADMIN_NAV_ITEMS = [
-  { to: '/users', label: 'Users' },
-  { to: '/settings', label: 'Settings' },
-];
+function NavItem({ item, badge }) {
+  return (
+    <NavLink to={item.to} className={({ isActive }) => `nav-item ${isActive ? 'nav-item-active' : ''}`}>
+      <Icon name={item.icon} size={17} />
+      <span>{item.label}</span>
+      {badge > 0 && <span className="nav-badge">{badge > 9 ? '9+' : badge}</span>}
+    </NavLink>
+  );
+}
 
 export default function Layout() {
   const { user, logout } = useAuth();
+  const location = useLocation();
+  const { data } = useQuery({ queryKey: ['notifications'], queryFn: () => notificationsApi.list(), staleTime: 30000 });
+  const unread = data?.unreadCount || 0;
+
+  const pageName =
+    location.pathname.startsWith('/websites/') ? 'Website details' :
+    location.pathname.startsWith('/scans/') ? 'Scan results' :
+    location.pathname === '/users' ? 'User management' :
+    location.pathname === '/settings' ? 'Settings' :
+    location.pathname === '/notifications' ? 'Notifications' :
+    location.pathname === '/websites' ? 'Websites' : 'Security overview';
 
   return (
-    <div className="min-h-screen flex">
-      <aside className="w-56 shrink-0 bg-slate-900 text-slate-100 flex flex-col">
-        <div className="px-4 py-5 text-lg font-semibold border-b border-slate-700">
-          Security Scanner
+    <div className="app-shell">
+      <aside className="sidebar">
+        <div className="brand">
+          <div className="brand-mark"><Icon name="shield" size={20} /></div>
+          <div><div className="brand-name">SecureAudit</div><div className="brand-sub">Website security</div></div>
         </div>
-        <nav className="flex-1 px-2 py-4 space-y-1">
-          {NAV_ITEMS.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) =>
-                `block px-3 py-2 rounded text-sm ${
-                  isActive ? 'bg-slate-700 text-white' : 'text-slate-300 hover:bg-slate-800'
-                }`
-              }
-            >
-              {item.label}
-            </NavLink>
-          ))}
-          {user?.role === 'Administrator' &&
-            ADMIN_NAV_ITEMS.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  `block px-3 py-2 rounded text-sm ${
-                    isActive ? 'bg-slate-700 text-white' : 'text-slate-300 hover:bg-slate-800'
-                  }`
-                }
-              >
-                {item.label}
-              </NavLink>
-            ))}
-        </nav>
-        <div className="px-4 py-4 border-t border-slate-700 text-sm">
-          <div className="text-slate-300">{user?.username}</div>
-          <div className="text-slate-500 text-xs mb-2">{user?.role}</div>
-          <button onClick={logout} className="text-slate-400 hover:text-white text-xs">
-            Log out
-          </button>
+
+        <div className="side-section">
+          <div className="side-label">Workspace</div>
+          {primary.map((item) => <NavItem key={item.to} item={item} badge={item.to === '/notifications' ? unread : 0} />)}
+        </div>
+
+        {user?.role === 'Administrator' && (
+          <div className="side-section">
+            <div className="side-label">Administration</div>
+            {admin.map((item) => <NavItem key={item.to} item={item} />)}
+          </div>
+        )}
+
+        <div className="sidebar-bottom">
+          <div className="profile">
+            <div className="avatar">{(user?.username || 'U').slice(0, 1).toUpperCase()}</div>
+            <div className="profile-copy"><strong>{user?.username || 'User'}</strong><span>{user?.role || 'Viewer'}</span></div>
+            <button className="icon-button subtle" onClick={logout} title="Log out"><Icon name="logout" size={16} /></button>
+          </div>
         </div>
       </aside>
-      <main className="flex-1 p-6 overflow-y-auto">
-        <Outlet />
+
+      <main className="main-area">
+        <header className="topbar">
+          <div><div className="eyebrow">Security workspace</div><h1>{pageName}</h1></div>
+          <div className="top-actions">
+            <NavLink to="/notifications" className="top-icon"><Icon name="bell" size={18} />{unread > 0 && <i />}</NavLink>
+            <div className="top-user">{user?.username || 'User'}</div>
+          </div>
+        </header>
+        <div className="page-content"><Outlet /></div>
       </main>
     </div>
   );

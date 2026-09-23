@@ -1,178 +1,26 @@
-import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { websitesApi, scansApi, reportsApi } from '../api/resources';
+import { useState } from 'react';
+import Icon from '../components/Icon';
 
-const REPORT_TYPES = [
-  { value: 'executive', label: 'Executive Summary' },
-  { value: 'technical', label: 'Technical' },
-  { value: 'compliance', label: 'Compliance' },
-  { value: 'vulnerability', label: 'Vulnerability' },
-  { value: 'remediation', label: 'Remediation' },
-];
-
-export default function WebsiteDetailPage() {
-  const { id } = useParams();
-  const [compareIds, setCompareIds] = useState([]);
-  const [reportType, setReportType] = useState('technical');
-  const [reportFormat, setReportFormat] = useState('pdf');
-
-  const { data: website } = useQuery({ queryKey: ['websites', id], queryFn: () => websitesApi.get(id) });
-  const { data: scans } = useQuery({ queryKey: ['scans'], queryFn: scansApi.list });
-
-  const websiteScans = (scans || [])
-    .filter((s) => s.WebsiteId === Number(id))
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-  function toggleCompare(scanId) {
-    setCompareIds((prev) => {
-      if (prev.includes(scanId)) return prev.filter((x) => x !== scanId);
-      if (prev.length >= 2) return [prev[1], scanId];
-      return [...prev, scanId];
-    });
-  }
-
-  const latestScanId = websiteScans[0]?.id;
-
-  return (
-    <div>
-      <Link to="/websites" className="text-sm text-slate-500 hover:underline">&larr; Websites</Link>
-      <h1 className="text-xl font-semibold mt-2 mb-1">{website?.name}</h1>
-      <p className="text-sm text-slate-500 mb-6">{website?.url}</p>
-
-      <div className="grid grid-cols-4 gap-4 mb-6">
-        <InfoCard label="Security Score" value={website?.securityScore ?? '—'} />
-        <InfoCard label="Environment" value={website?.environment} />
-        <InfoCard label="Scan Frequency" value={website?.scanFrequency} />
-        <InfoCard label="Status" value={website?.status} />
-      </div>
-
-      {latestScanId && (
-        <div className="bg-white border rounded-lg p-4 mb-6">
-          <h3 className="text-sm font-medium mb-3">Download a report (latest scan)</h3>
-          <div className="flex gap-2 items-center">
-            <select
-              className="border rounded px-3 py-2 text-sm"
-              value={reportType}
-              onChange={(e) => setReportType(e.target.value)}
-            >
-              {REPORT_TYPES.map((t) => (
-                <option key={t.value} value={t.value}>{t.label}</option>
-              ))}
-            </select>
-            <select
-              className="border rounded px-3 py-2 text-sm"
-              value={reportFormat}
-              onChange={(e) => setReportFormat(e.target.value)}
-            >
-              <option value="pdf">PDF</option>
-              <option value="excel">Excel</option>
-              <option value="csv">CSV</option>
-            </select>
-            <button
-              onClick={() => reportsApi.download(latestScanId, reportType, reportFormat)}
-              className="bg-slate-900 text-white text-sm px-4 py-2 rounded"
-            >
-              Download
-            </button>
-            <button
-              onClick={() => reportsApi.downloadTrend(id, reportFormat)}
-              className="border text-sm px-4 py-2 rounded"
-            >
-              Download Trend Report
-            </button>
-          </div>
-        </div>
-      )}
-
-      {compareIds.length === 2 && <CompareResult previousId={compareIds[0]} currentId={compareIds[1]} />}
-
-      <div className="bg-white border rounded-lg overflow-hidden">
-        <div className="px-4 py-3 border-b flex items-center justify-between">
-          <h3 className="text-sm font-medium">Scan History</h3>
-          {compareIds.length === 2 && (
-            <button onClick={() => setCompareIds([])} className="text-xs text-slate-500">
-              Clear comparison
-            </button>
-          )}
-        </div>
-        {!websiteScans.length ? (
-          <p className="p-4 text-slate-500 text-sm">No scans yet.</p>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-slate-500 border-b bg-slate-50">
-                <th className="py-2 px-4">Compare</th>
-                <th className="py-2 px-4">Date</th>
-                <th className="py-2 px-4">Status</th>
-                <th className="py-2 px-4">Score</th>
-                <th className="py-2 px-4"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {websiteScans.map((s) => (
-                <tr key={s.id} className="border-b last:border-0 hover:bg-slate-50">
-                  <td className="py-2 px-4">
-                    <input
-                      type="checkbox"
-                      checked={compareIds.includes(s.id)}
-                      onChange={() => toggleCompare(s.id)}
-                    />
-                  </td>
-                  <td className="py-2 px-4">{new Date(s.createdAt).toLocaleString()}</td>
-                  <td className="py-2 px-4">{s.status}</td>
-                  <td className="py-2 px-4">{s.securityScore ?? '—'}</td>
-                  <td className="py-2 px-4">
-                    <Link to={`/scans/${s.id}`} className="text-slate-900 hover:underline text-xs">
-                      View findings
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-    </div>
-  );
+export default function WebsiteDetailPage(){
+ const {id}=useParams(); const [compare,setCompare]=useState([]); const [type,setType]=useState('technical'); const [format,setFormat]=useState('pdf');
+ const {data:website,isLoading:wl}=useQuery({queryKey:['websites',id],queryFn:()=>websitesApi.get(id)});
+ const {data:scans=[]}=useQuery({queryKey:['scans'],queryFn:scansApi.list});
+ if(wl)return <div className="empty">Loading website…</div>;
+ const rows=scans.filter(s=>Number(s.WebsiteId)===Number(id)).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+ const latest=rows[0];
+ const toggle=x=>setCompare(p=>p.includes(x)?p.filter(v=>v!==x):p.length===2?[p[1],x]:[...p,x]);
+ return <div>
+  <Link to="/websites" className="btn btn-secondary" style={{marginBottom:15}}>← Websites</Link>
+  <div className="page-head"><div><h2 className="page-title">{website?.name}</h2><p className="page-desc">{website?.url}</p></div><div style={{display:'flex',gap:8}}>{latest&&<Link className="btn btn-primary" to={`/scans/${latest.id}`}><Icon name="scan" size={14}/>Latest results</Link>}</div></div>
+  <div className="stat-grid"><Stat label="Security score" value={website?.securityScore??'—'} accent={Number(website?.securityScore)<50?'red':Number(website?.securityScore)<75?'amber':'green'}/><Stat label="Environment" value={website?.environment||'—'} accent="blue"/><Stat label="Scan frequency" value={website?.scanFrequency||'Manual'} accent="green"/><Stat label="Status" value={website?.status||'—'} accent={website?.status==='Enabled'?'green':'red'}/></div>
+  {latest&&<div className="card" style={{marginBottom:15}}><div className="card-head"><div><h3 className="card-title">Reports</h3><div className="card-sub">Generate a report from the latest scan.</div></div><div style={{display:'flex',gap:8}}><select className="input" style={{width:145}} value={type} onChange={e=>setType(e.target.value)}><option value="technical">Technical</option><option value="executive">Executive</option><option value="vulnerability">Vulnerability</option><option value="remediation">Remediation</option><option value="compliance">Compliance</option></select><select className="input" style={{width:100}} value={format} onChange={e=>setFormat(e.target.value)}><option value="pdf">PDF</option><option value="excel">Excel</option><option value="csv">CSV</option></select><button className="btn btn-secondary" onClick={()=>reportsApi.download(latest.id,type,format)}><Icon name="download" size={14}/>Download</button></div></div></div>}
+  {compare.length===2&&<Compare previous={compare[0]} current={compare[1]}/>}
+  <div className="card"><div className="card-head"><div><h3 className="card-title">Scan history</h3><div className="card-sub">Select two scans to compare findings.</div></div>{compare.length>0&&<button className="btn btn-secondary" onClick={()=>setCompare([])}>Clear selection</button>}</div><div className="table-wrap"><table><thead><tr><th>Compare</th><th>Date</th><th>Status</th><th>Score</th><th></th></tr></thead><tbody>{rows.length?rows.map(s=><tr key={s.id}><td><input type="checkbox" checked={compare.includes(s.id)} onChange={()=>toggle(s.id)}/></td><td>{new Date(s.createdAt).toLocaleString()}</td><td>{s.status}</td><td><strong>{s.securityScore??'—'}</strong></td><td><Link className="btn btn-secondary" style={{minHeight:30,padding:'0 9px',fontSize:10}} to={`/scans/${s.id}`}>View findings</Link></td></tr>):<tr><td colSpan="5"><div className="empty">No scans have been run for this website.</div></td></tr>}</tbody></table></div></div>
+ </div>
 }
-
-function InfoCard({ label, value }) {
-  return (
-    <div className="bg-white rounded-lg border p-4">
-      <div className="text-sm text-slate-500">{label}</div>
-      <div className="text-lg font-semibold mt-1">{value ?? '—'}</div>
-    </div>
-  );
-}
-
-function CompareResult({ previousId, currentId }) {
-  const { data, isLoading } = useQuery({
-    queryKey: ['compare', previousId, currentId],
-    queryFn: () => scansApi.compare(previousId, currentId),
-  });
-
-  if (isLoading) return <p className="text-sm text-slate-500 mb-4">Comparing…</p>;
-  if (!data) return null;
-
-  return (
-    <div className="grid grid-cols-3 gap-4 mb-6">
-      <ResultList title="Resolved" items={data.resolved} tone="text-green-700" />
-      <ResultList title="Recurring" items={data.recurring} tone="text-slate-600" />
-      <ResultList title="New" items={data.newIssues} tone="text-high" />
-    </div>
-  );
-}
-
-function ResultList({ title, items, tone }) {
-  return (
-    <div className="bg-white border rounded-lg p-4">
-      <h4 className={`text-sm font-medium mb-2 ${tone}`}>{title} ({items.length})</h4>
-      <ul className="text-xs space-y-1 max-h-48 overflow-y-auto">
-        {items.map((f, i) => (
-          <li key={i} className="text-slate-600">{f.module}: {f.issue}</li>
-        ))}
-      </ul>
-    </div>
-  );
-}
+function Stat({label,value,accent}){return <div className="card stat-card"><span className={`stat-accent ${accent||''}`}/><div className="stat-label">{label}</div><div className="stat-value" style={{fontSize:20}}>{value}</div></div>}
+function Compare({previous,current}){const {data,isLoading}=useQuery({queryKey:['compare',previous,current],queryFn:()=>scansApi.compare(previous,current)});if(isLoading)return <div className="alert alert-info">Comparing scans…</div>;if(!data)return null;return <div className="grid-2-equal"><CompareBox title="Resolved" items={data.resolved} cls="green"/><CompareBox title="New findings" items={data.newIssues} cls="red"/></div>}
+function CompareBox({title,items,cls}){return <div className="card" style={{padding:17}}><div className="card-title">{title} <span style={{color:cls==='red'?'#c94b52':'#2b8c74'}}>({items?.length||0})</span></div><div style={{marginTop:10}}>{(items||[]).slice(0,8).map((x,i)=><div key={i} className="finding" style={{padding:'9px 0'}}><span className="muted">{x.module}: </span>{x.issue}</div>)}</div></div>}
