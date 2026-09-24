@@ -1,6 +1,9 @@
 const { Website, Scan, ScanResult } = require('../models');
 const { runScanForWebsite } = require('../services/scanRunner.service');
 
+function canSeeAll(user) {
+  return user.role === 'Administrator' || user.role === 'Viewer';
+}
 async function startScan(req, res) {
   try {
     const { websiteId } = req.body;
@@ -51,7 +54,7 @@ async function getScan(req, res) {
     if (!scan) {
       return res.status(404).json({ message: 'Scan not found' });
     }
-    if (req.user.role !== 'Administrator' && scan.Website.UserId !== req.user.id) {
+    if (!canSeeAll(req.user) && scan.Website.UserId !== req.user.id){
       return res.status(404).json({ message: 'Scan not found' });
     }
 
@@ -66,7 +69,7 @@ async function listScans(req, res) {
   try {
     let websiteIds;
 
-    if (req.user.role === 'Administrator') {
+    if(canSeeAll(req.user)) {
       const all = await Website.findAll({ attributes: ['id'] });
       websiteIds = all.map((w) => w.id);
     } else {
@@ -87,9 +90,7 @@ async function listScans(req, res) {
   }
 }
 
-/**
- * Section 10 - Scan History / comparison.
- */
+
 async function compareScans(req, res) {
   try {
     const { previousId, currentId } = req.query;
@@ -109,7 +110,7 @@ async function compareScans(req, res) {
     if (previous.WebsiteId !== current.WebsiteId) {
       return res.status(400).json({ message: 'Scans must belong to the same website' });
     }
-    if (req.user.role !== 'Administrator' && current.Website.UserId !== req.user.id) {
+    if (!canSeeAll(req.user) && current.Website.UserId !== req.user.id){
       return res.status(404).json({ message: 'Scan not found' });
     }
 

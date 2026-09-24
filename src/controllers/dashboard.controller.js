@@ -2,7 +2,7 @@ const { Op } = require('sequelize');
 const { Website, Scan, ScanResult } = require('../models');
 
 async function scopedWebsiteIds(user) {
-  if (user.role === 'Administrator') {
+  if (user.role === 'Administrator' || user.role === 'Viewer')  {
     const all = await Website.findAll({ attributes: ['id'] });
     return all.map((w) => w.id);
   }

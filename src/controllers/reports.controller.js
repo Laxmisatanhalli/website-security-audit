@@ -29,13 +29,13 @@ const EXTENSIONS = { pdf: 'pdf', excel: 'xlsx', csv: 'csv' };
 
 async function assertScanAccess(user, scan) {
   if (!scan) return false;
-  if (user.role === 'Administrator') return true;
+  if (user.role === 'Administrator' || user.role === 'Viewer') return true;
   return scan.Website && scan.Website.UserId === user.id;
 }
 
 async function assertWebsiteAccess(user, website) {
   if (!website) return false;
-  if (user.role === 'Administrator') return true;
+  if (user.role === 'Administrator' || user.role === 'Viewer') return true;
   return website.UserId === user.id;
 }
 

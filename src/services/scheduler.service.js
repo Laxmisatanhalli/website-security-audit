@@ -3,6 +3,7 @@ const { Op } = require('sequelize');
 const { Website, User } = require('../models');
 const { runScanForWebsite } = require('./scanRunner.service');
 const { notifySslExpiry } = require('./notification.service');
+const { getSettings } = require('./settings.service');
 
 let dueScansTask = null;
 let sslCheckTask = null;
@@ -85,12 +86,13 @@ function startScheduler() {
   }
 
   // Every 15 minutes
-  dueScansTask = cron.schedule('*/15 * * * *', () => {
+    const settings = getSettings();
+  dueScansTask = cron.schedule(`*/${settings.schedulerIntervalMinutes} * * * *`, () => {
     runDueScans().catch((err) => console.error('[scheduler] runDueScans crashed:', err));
   });
 
   // Daily at 06:00 server time
-  sslCheckTask = cron.schedule('0 6 * * *', () => {
+    sslCheckTask = cron.schedule(`0 ${settings.sslCheckHourUtc} * * *`, () => {
     runSslExpiryCheck().catch((err) => console.error('[scheduler] runSslExpiryCheck crashed:', err));
   });
 
@@ -102,4 +104,8 @@ function stopScheduler() {
   if (sslCheckTask) { sslCheckTask.stop(); sslCheckTask = null; }
 }
 
-module.exports = { startScheduler, stopScheduler, runDueScans, runSslExpiryCheck };
+function restartScheduler() {
+  stopScheduler();
+  startScheduler();
+}
+module.exports = { startScheduler, stopScheduler, restartScheduler, runDueScans, runSslExpiryCheck };

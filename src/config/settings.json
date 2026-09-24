@@ -1,0 +1,8 @@
+{
+  "scanTimeoutSeconds": 300,
+  "scanRetries": 1,
+  "schedulerIntervalMinutes": 15,
+  "sslCheckHourUtc": 6,
+  "emailNotificationsEnabled": true,
+  "inAppNotificationsEnabled": true
+}

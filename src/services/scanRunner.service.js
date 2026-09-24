@@ -7,6 +7,7 @@ const {
   notifyCriticalVulnerabilities,
   notifyNewHighRiskIssues,
 } = require('./notification.service');
+const { getSettings } = require('./settings.service');
 
 const VALID_SEVERITIES = ['Info', 'Low', 'Medium', 'High', 'Critical'];
 
@@ -24,7 +25,22 @@ async function runScanForWebsite(website, owner) {
 
   let results;
   try {
-    results = await runScanner(website.url);
+           const { scanRetries } = getSettings();
+    let lastErr = null;
+    for (let attempt = 0; attempt <= scanRetries; attempt++) {
+      try {
+        results = await runScanner(website.url);
+        
+        if (results.length === 1 && results[0].module === 'HTTP Request') {
+          throw new Error(results[0].issue);
+        }
+        lastErr = null;
+        break;
+      } catch (e) {
+        lastErr = e;
+      }
+    }
+    if (lastErr) throw lastErr;
   } catch (scanErr) {
     await scan.update({ status: 'failed' });
     if (owner) {

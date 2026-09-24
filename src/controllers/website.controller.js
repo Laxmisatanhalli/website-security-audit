@@ -1,5 +1,38 @@
 const { Website } = require('../models');
 const { computeNextScanDate } = require('../services/scanRunner.service');
+const dns = require('dns').promises;
+const net = require('net');
+
+function isPrivateAddress(ip) {
+  if (net.isIPv4(ip)) {
+    const [a, b] = ip.split('.').map(Number);
+    return a === 0 || a === 10 || a === 127
+      || (a === 169 && b === 254)
+      || (a === 172 && b >= 16 && b <= 31)
+      || (a === 192 && b === 168)
+      || (a === 100 && b >= 64 && b <= 127);
+  }
+  const v = ip.toLowerCase();
+  return v === '::1' || v === '::' || v.startsWith('fc') || v.startsWith('fd')
+    || v.startsWith('fe80') || v.startsWith('::ffff:127.')
+    || v.startsWith('::ffff:10.') || v.startsWith('::ffff:192.168.');
+}
+
+async function assertPublicTarget(url) {
+  if (process.env.ALLOW_PRIVATE_TARGETS === 'true') return null;
+  const hostname = new URL(url).hostname.replace(/^\[|\]$/g, '');
+  try {
+    const addrs = net.isIP(hostname)
+      ? [{ address: hostname }]
+      : await dns.lookup(hostname, { all: true });
+    if (addrs.some((a) => isPrivateAddress(a.address))) {
+      return 'Scanning private or local addresses is not allowed';
+    }
+  } catch (err) {
+    return 'Could not resolve that hostname';
+  }
+  return null;
+}
 
 function isValidUrl(value) {
   if (typeof value !== 'string' || value.trim().length === 0) {
@@ -13,6 +46,9 @@ function isValidUrl(value) {
   }
 }
 
+function canSeeAll(user) {
+  return user.role === 'Administrator' || user.role === 'Viewer';
+}
 const ENVIRONMENTS = ['Production', 'Staging', 'Development'];
 const SCAN_FREQUENCIES = ['Manual', 'Daily', 'Weekly', 'Monthly'];
 const SCAN_TYPES = ['Full', 'Headers Only', 'SSL Only', 'Quick'];
@@ -60,6 +96,11 @@ async function addWebsite(req, res) {
       return res.status(400).json({ message: validationError });
     }
 
+        const targetError = await assertPublicTarget(fields.url);
+    if (targetError) {
+      return res.status(400).json({ message: targetError });
+    }
+
     const website = await req.user.createWebsite({
       ...fields,
       nextScanDate: fields.scanFrequency && fields.scanFrequency !== 'Manual'
@@ -75,8 +116,7 @@ async function addWebsite(req, res) {
 
 async function listWebsites(req, res) {
   try {
-    // Administrators can see every website; Analysts/Viewers see their own.
-    const where = req.user.role === 'Administrator' ? {} : { UserId: req.user.id };
+    const where = canSeeAll(req.user) ? {} : { UserId: req.user.id };
     const websites = await Website.findAll({ where, order: [['createdAt', 'DESC']] });
     return res.status(200).json({ websites });
   } catch (err) {
@@ -91,7 +131,7 @@ async function getWebsite(req, res) {
     if (!website) {
       return res.status(404).json({ message: 'Website not found' });
     }
-    if (req.user.role !== 'Administrator' && website.UserId !== req.user.id) {
+    if (!canSeeAll(req.user) && website.UserId !== req.user.id)  {
       return res.status(404).json({ message: 'Website not found' });
     }
     return res.status(200).json({ website });
@@ -115,6 +155,13 @@ async function updateWebsite(req, res) {
     const validationError = validateWebsitePayload(fields, { partial: true });
     if (validationError) {
       return res.status(400).json({ message: validationError });
+    }
+
+    if (fields.url !== undefined) {
+      const targetError = await assertPublicTarget(fields.url);
+      if (targetError) {
+        return res.status(400).json({ message: targetError });
+      }
     }
 
     await website.update({

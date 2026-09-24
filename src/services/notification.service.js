@@ -1,5 +1,6 @@
 const { Notification, User } = require('../models');
 const { sendEmail } = require('./email.service');
+const { getSettings } = require('./settings.service');
 
 /**
  * Creates an in-app notification for a user and, when the user has an
@@ -7,23 +8,30 @@ const { sendEmail } = require('./email.service');
  * the in-app notification from being saved.
  */
 async function notifyUser(userId, { type, severity = 'Info', title, message }) {
-  const notification = await Notification.create({
-    UserId: userId,
-    type,
-    severity,
-    title,
-    message,
-  });
+  const settings = getSettings();
+  let notification = null;
 
-  const user = await User.findByPk(userId);
-  if (user && user.email) {
-    const result = await sendEmail({
-      to: user.email,
-      subject: `[Security Scanner] ${title}`,
-      text: message,
+  if (settings.inAppNotificationsEnabled) {
+    notification = await Notification.create({
+      UserId: userId,
+      type,
+      severity,
+      title,
+      message,
     });
-    if (result.sent) {
-      await notification.update({ emailSent: true });
+  }
+
+  if (settings.emailNotificationsEnabled) {
+    const user = await User.findByPk(userId);
+    if (user && user.email) {
+      const result = await sendEmail({
+        to: user.email,
+        subject: `[Security Scanner] ${title}`,
+        text: message,
+      });
+      if (result.sent && notification) {
+        await notification.update({ emailSent: true });
+      }
     }
   }
 

@@ -8,7 +8,7 @@ const { startScheduler } = require('./src/services/scheduler.service');
 
 async function start(){
   await connectTodb();
-  await sequelize.sync({ alter: true });
+  await sequelize.sync();
   console.log('Tables synced');
   startScheduler();
   app.listen(3000, () => console.log('Server is running on port 3000'));
