@@ -29,6 +29,27 @@ function addFindingRow(doc, finding) {
   doc.moveDown(0.6);
 }
 
+const SEVERITY_ORDER = ['Critical', 'High', 'Medium', 'Low', 'Info'];
+
+function addFindingsGroupedBySeverity(doc, findings) {
+  for (const severity of SEVERITY_ORDER) {
+    const group = findings.filter((f) => f.severity === severity);
+    if (!group.length) continue;
+
+    doc.fontSize(13).fillColor(SEVERITY_COLORS[severity] || '#333').text(severity.toUpperCase());
+    doc.moveDown(0.3);
+
+    group.forEach((f, i) => {
+      doc.fontSize(11).fillColor('#111').text(`${i + 1}) ${f.module}: ${f.issue}`);
+      if (f.recommendation) {
+        doc.fontSize(10).fillColor('#555').text(`Recommendation: ${f.recommendation}`, { indent: 14 });
+      }
+      doc.moveDown(0.5);
+    });
+    doc.moveDown(0.6);
+  }
+}
+
 /**
  * Renders a report data object (from reportData.service.js) into a PDF
  * buffer. Returns a Promise<Buffer>.
@@ -71,7 +92,7 @@ function generatePdf(reportData) {
 
         case 'Technical Report': {
           addHeader(doc, 'Technical Report', reportData.website, reportData.scanDate);
-          reportData.findings.forEach((f) => addFindingRow(doc, f));
+          addFindingsGroupedBySeverity(doc, reportData.findings);
           break;
         }
 
@@ -79,7 +100,7 @@ function generatePdf(reportData) {
           addHeader(doc, 'Vulnerability Report', reportData.website, reportData.scanDate);
           doc.fontSize(11).fillColor('#333').text(`Total vulnerabilities: ${reportData.totalVulnerabilities}`);
           doc.moveDown(0.8);
-          reportData.findings.forEach((f) => addFindingRow(doc, f));
+          addFindingsGroupedBySeverity(doc, reportData.findings);
           break;
         }
 

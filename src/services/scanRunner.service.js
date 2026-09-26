@@ -20,8 +20,8 @@ const VALID_SEVERITIES = ['Info', 'Low', 'Medium', 'High', 'Critical'];
  * `owner` is the User record notifications should be sent to (the
  * website's owner); pass null to skip notifications (e.g. dry runs).
  */
-async function runScanForWebsite(website, owner) {
-  const scan = await website.createScan({ status: 'running' });
+async function runScanForWebsite(website, owner, existingScan) {
+  const scan = existingScan || await website.createScan({ status: 'running' });
 
   let results;
   try {

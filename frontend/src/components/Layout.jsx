@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { notificationsApi } from '../api/resources';
 import { useQuery } from '@tanstack/react-query';
 import Icon from './Icon';
+import ScanProgressBanner from './ScanProgressBanner';
 
 const primary = [
   { to: '/dashboard', label: 'Overview', icon: 'grid' },
@@ -75,6 +76,7 @@ export default function Layout() {
             <div className="top-user">{user?.username || 'User'}</div>
           </div>
         </header>
+        <ScanProgressBanner />
         <div className="page-content"><Outlet /></div>
       </main>
     </div>

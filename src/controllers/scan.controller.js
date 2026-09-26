@@ -26,17 +26,13 @@ async function startScan(req, res) {
       return res.status(409).json({ message: 'Website is disabled, enable it before scanning' });
     }
 
-    try {
-      const { scan, securityScore, scoreCategory, severityCounts } = await runScanForWebsite(website, req.user);
-      return res.status(201).json({ scan, securityScore, scoreCategory, severityCounts });
-    } catch (scanErr) {
-      console.error('scan run error:', scanErr);
-      return res.status(502).json({
-        message: 'Scan failed to complete',
-        error: scanErr.message,
-        scan: scanErr.scan || null,
-      });
-    }
+    const scan = await website.createScan({ status: 'running' });
+
+    runScanForWebsite(website, req.user, scan).catch((err) => {
+      console.error('background scan error:', err.message);
+    });
+
+    return res.status(202).json({ scan });
   } catch (err) {
     console.error('startScan error:', err);
     return res.status(500).json({ message: 'Internal server error' });

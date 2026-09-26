@@ -5,6 +5,7 @@ import { BrowserRouter } from 'react-router-dom';
 import './index.css';
 import App from './App.jsx';
 import { AuthProvider } from './context/AuthContext.jsx';
+import { ScanProgressProvider } from './context/ScanProgressContext.jsx';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -17,7 +18,9 @@ createRoot(document.getElementById('root')).render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
-          <App />
+          <ScanProgressProvider>
+            <App />
+          </ScanProgressProvider>
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>

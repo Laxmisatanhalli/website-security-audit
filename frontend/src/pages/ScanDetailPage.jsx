@@ -7,7 +7,7 @@ import { useState } from 'react';
 
 const ORDER={Critical:0,High:1,Medium:2,Low:3,Info:4};
 export default function ScanDetailPage(){
- const {id}=useParams(); const {data:scan,isLoading,isError}=useQuery({queryKey:['scans',id],queryFn:()=>scansApi.get(id)}); const [format,setFormat]=useState('pdf');
+ const {id}=useParams(); const {data:scan,isLoading,isError}=useQuery({queryKey:['scans',id],queryFn:()=>scansApi.get(id),refetchInterval:(query)=>query.state.data?.status==='running'?3000:false}); const [format,setFormat]=useState('pdf');
  if(isLoading)return <div className="empty">Loading scan results…</div>; if(isError||!scan)return <div className="empty">Scan not found.</div>;
  const findings=[...(scan.ScanResults||[])].sort((a,b)=>(ORDER[a.severity]??9)-(ORDER[b.severity]??9));
  const counts=findings.reduce((a,f)=>(a[f.severity]=(a[f.severity]||0)+1,a),{});
@@ -23,3 +23,5 @@ export default function ScanDetailPage(){
   </div>
  </div>
 }
+
+
